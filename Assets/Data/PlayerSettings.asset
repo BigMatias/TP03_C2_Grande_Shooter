@@ -12,8 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 03a752302a5dd7aed93e33b54a461e10, type: 3}
   m_Name: PlayerSettings
   m_EditorClassIdentifier: Assembly-CSharp::PlayerSettingsSO
-  mouseSens: 100
+  jumpKey: 32
+  runkey: 304
+  crouchKey: 306
+  mouseSens: 200
   speed: 10
+  runSpeed: 20
+  crouchSpeed: 5
   jumpForce: 5
-  m1Damage: 0
-  m2Damage: 0
+  m1Damage: 10
+  m2Damage: 50

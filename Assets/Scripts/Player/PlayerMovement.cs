@@ -1,32 +1,36 @@
 using System;
-using System.Collections;
 using UnityEngine;
-using UnityEngine.Networking.PlayerConnection;
 
 public class PlayerMovement : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private PlayerSettingsSO playerSettingsSo;
     [SerializeField] private LayerMask groundLayer;
-
+    
     [Header("Cameras: ")]
     [SerializeField] private Camera _camera;
-    [SerializeField] private float rotationSpeed = 10f;
     [SerializeField] private float minPitch = -10f;
     [SerializeField] private float maxPitch = 45f;
     
     private float _yaw;
     private float _pitch;
-    private float _horizontal;
-    private float _vertical;
+    private Vector3 _movement;
     private bool _isGrounded;
+    private bool _isCrouching;
+    private bool _jumpRequested;
+    private bool _isRunning = false;
+    private float _standHeight = 2f;
+    private float _crouchHeight = 1f;
+    private Vector3 _standCameraPos;
+    private Vector3 _crouchCameraPos;
     
     private Vector3 targetPoint;
     private Vector2 _lastMousePos;
 
     private HealthSystem _healthSystem;
     private Rigidbody _rigidbody;
-
+    private CapsuleCollider _collider;
+    
     public event Action OnPlayerHurt;
     public event Action OnPlayerDied;
 
@@ -35,29 +39,37 @@ public class PlayerMovement : MonoBehaviour
     {
         _healthSystem = GetComponent<HealthSystem>();
         _rigidbody = GetComponent<Rigidbody>();
+        _collider = GetComponent<CapsuleCollider>();
 
         _healthSystem.onDie += HealthSystemV2_onDie;
     }
 
+    private void Start()
+    {
+        _standCameraPos = _camera.transform.localPosition; 
+        _crouchCameraPos = new Vector3(_standCameraPos.x, _standCameraPos.y - 0.5f, _standCameraPos.z); 
+    }
+
     void Update()
     {
-        _horizontal = Input.GetAxis("Horizontal");
-        _vertical = Input.GetAxis("Vertical");
-
+        _movement = (transform.forward * Input.GetAxisRaw("Vertical") + transform.right * Input.GetAxisRaw("Horizontal")).normalized;
+        
+        if (Input.GetKeyDown(playerSettingsSo.crouchKey))
+            Crouch(true);
+        else if (Input.GetKeyUp(playerSettingsSo.crouchKey))
+            Crouch(false);
+        
+        Run();
+        if (Input.GetKeyDown(playerSettingsSo.jumpKey))
+            _jumpRequested = true;
         CameraRotate();
 
     }
 
     private void FixedUpdate()
     {
-        Vector3 direction = (transform.forward * _vertical + transform.right * _horizontal).normalized;
-        _rigidbody.linearVelocity = direction * playerSettingsSo.speed;
-        
-        
-        _isGrounded = Physics.Raycast(transform.position, Vector3.down, 1.1f, groundLayer);
-
-        if (Input.GetButtonDown("Jump") && _isGrounded)
-            _rigidbody.AddForce(Vector3.up * playerSettingsSo.jumpForce, ForceMode.Impulse);
+        Jump();
+        Movement();
     }
 
     private void OnDestroy()
@@ -69,21 +81,59 @@ public class PlayerMovement : MonoBehaviour
     {
         OnPlayerDied?.Invoke();
     }
+    
+    private void Run()
+    {
+        if (Input.GetKeyDown(playerSettingsSo.runkey))
+            _isRunning = true; 
+        else if (Input.GetKeyUp(playerSettingsSo.runkey))
+            _isRunning = false;
+    }
+    
+    private void Movement()
+    {
+        float currentY = _rigidbody.linearVelocity.y;
+        
+        if (_isRunning && !_isCrouching)
+            _rigidbody.linearVelocity = new Vector3( _movement.x * playerSettingsSo.runSpeed, currentY, _movement.z * playerSettingsSo.runSpeed); 
+        else if (!_isRunning  && !_isCrouching)
+            _rigidbody.linearVelocity = new Vector3( _movement.x * playerSettingsSo.speed, currentY, _movement.z * playerSettingsSo.speed); 
+        else if (_isCrouching)
+            _rigidbody.linearVelocity = new Vector3( _movement.x * playerSettingsSo.crouchSpeed, currentY, _movement.z * playerSettingsSo.crouchSpeed); 
+    }
+    
+    private void Jump()
+    {
+        _isGrounded = Physics.Raycast(transform.position, Vector3.down, 1.1f, groundLayer);
 
+        if (_jumpRequested && _isGrounded)
+        {
+            _rigidbody.AddForce(Vector3.up * playerSettingsSo.jumpForce, ForceMode.Impulse);
+            _jumpRequested = false;
+        }
+        else
+        {
+            _jumpRequested = false;
+        }
+    }
+    
+
+    private void Crouch(bool crouch)
+    {
+        _isCrouching = crouch;
+        _collider.height = crouch ? _crouchHeight : _standHeight;
+        _camera.transform.localPosition = crouch ? _crouchCameraPos : _standCameraPos;
+    }
+    
     private void CameraRotate()
     {
-        float mouseX, mouseY;
+        float mouseX = Input.GetAxis("Mouse X") * playerSettingsSo.mouseSens * Time.deltaTime;
+        float mouseY = Input.GetAxis("Mouse Y") * playerSettingsSo.mouseSens * Time.deltaTime;
 
-        mouseX = Input.GetAxis("Mouse X") * playerSettingsSo.mouseSens * Time.deltaTime;
-        mouseY = Input.GetAxis("Mouse Y") * playerSettingsSo.mouseSens * Time.deltaTime;
-
-        _yaw += mouseX;
         _pitch -= mouseY;
-
         _pitch = Mathf.Clamp(_pitch, -30f, 60f);
-        _yaw = Mathf.Clamp(_yaw, -90f, 90f);
 
-        _camera.transform.localRotation = Quaternion.Euler(_pitch, _yaw, 0);
-        transform.localRotation = Quaternion.Euler(0, _yaw, 0);
+        _camera.transform.localRotation = Quaternion.Euler(_pitch, 0, 0);
+        transform.Rotate(Vector3.up * mouseX);
     }
 }

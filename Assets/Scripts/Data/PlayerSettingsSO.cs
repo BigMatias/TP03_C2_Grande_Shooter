@@ -4,9 +4,15 @@ using UnityEngine;
 
 public class PlayerSettingsSO : ScriptableObject
 {
+    [Header("Controls")]
+    public KeyCode jumpKey;
+    public KeyCode runkey;
+    public KeyCode crouchKey;
     [Header("General Configs: ")]
     public float mouseSens;
     public float speed;
+    public float runSpeed;
+    public float crouchSpeed;
     public float jumpForce;
     public float m1Damage;
     public float m2Damage;
