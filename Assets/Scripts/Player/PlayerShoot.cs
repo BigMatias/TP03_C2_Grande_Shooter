@@ -7,6 +7,7 @@ public class PlayerShoot : MonoBehaviour
     [SerializeField] private WeaponDataSO gun;
     
     private WeaponBase _currentWeapon;
+    public event Action OnPlayerShot;
 
     private void Start()
     {
@@ -27,13 +28,13 @@ public class PlayerShoot : MonoBehaviour
         GameObject go = Instantiate(weaponData.weaponPrefab, _weaponHolder);
         go.transform.localPosition = Vector3.zero;
         go.transform.localRotation = Quaternion.identity;
-        Debug.Log($"Weapon spawned at: {go.transform.position}, parent: {go.transform.parent.name}");
         _currentWeapon = go.GetComponent<WeaponBase>();
     }
 
     private void TryShoot()
     {
         if (_currentWeapon == null) return;
+        OnPlayerShot?.Invoke();
         Ray ray = new Ray(_camera.transform.position, _camera.transform.forward);
         _currentWeapon.TryShoot(ray);
     }

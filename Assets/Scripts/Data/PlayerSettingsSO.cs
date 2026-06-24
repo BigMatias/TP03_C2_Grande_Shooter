@@ -14,6 +14,4 @@ public class PlayerSettingsSO : ScriptableObject
     public float runSpeed;
     public float crouchSpeed;
     public float jumpForce;
-    public float m1Damage;
-    public float m2Damage;
 }

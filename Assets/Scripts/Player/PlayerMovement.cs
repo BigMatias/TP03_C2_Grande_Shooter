@@ -1,11 +1,12 @@
 using System;
 using UnityEngine;
 
-public class PlayerMovement : MonoBehaviour
+public class PlayerMovement : MonoBehaviour, IDamageable
 {
     [Header("References")]
     [SerializeField] private PlayerSettingsSO playerSettingsSo;
     [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private PlayerChannelSO playerChannel;
     
     [Header("Cameras: ")]
     [SerializeField] private Camera _camera;
@@ -31,8 +32,8 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody _rigidbody;
     private CapsuleCollider _collider;
     
-    public event Action OnPlayerHurt;
-    public event Action OnPlayerDied;
+    public event Action onDie;
+    public event Action<float, float> onDamage;
 
 
     private void Awake()
@@ -40,9 +41,12 @@ public class PlayerMovement : MonoBehaviour
         _healthSystem = GetComponent<HealthSystem>();
         _rigidbody = GetComponent<Rigidbody>();
         _collider = GetComponent<CapsuleCollider>();
-
+        
+        playerChannel.Register(transform);
         _healthSystem.onDie += HealthSystemV2_onDie;
+        _healthSystem.onDamage += HealthSystem_OnDamage;
     }
+
 
     private void Start()
     {
@@ -54,15 +58,15 @@ public class PlayerMovement : MonoBehaviour
     {
         _movement = (transform.forward * Input.GetAxisRaw("Vertical") + transform.right * Input.GetAxisRaw("Horizontal")).normalized;
         
+        CameraRotate();
+        Run();
         if (Input.GetKeyDown(playerSettingsSo.crouchKey))
             Crouch(true);
         else if (Input.GetKeyUp(playerSettingsSo.crouchKey))
             Crouch(false);
         
-        Run();
         if (Input.GetKeyDown(playerSettingsSo.jumpKey))
             _jumpRequested = true;
-        CameraRotate();
 
     }
 
@@ -76,10 +80,15 @@ public class PlayerMovement : MonoBehaviour
     {
         _healthSystem.onDie -= HealthSystemV2_onDie;
     }
-
+    
+    private void HealthSystem_OnDamage(float current, float total)
+    {
+        onDamage?.Invoke(current, total);
+    }
+    
     private void HealthSystemV2_onDie()
     {
-        OnPlayerDied?.Invoke();
+        onDie?.Invoke();
     }
     
     private void Run()
@@ -131,9 +140,15 @@ public class PlayerMovement : MonoBehaviour
         float mouseY = Input.GetAxis("Mouse Y") * playerSettingsSo.mouseSens * Time.deltaTime;
 
         _pitch -= mouseY;
-        _pitch = Mathf.Clamp(_pitch, -30f, 60f);
+        _pitch = Mathf.Clamp(_pitch, minPitch, maxPitch);
 
         _camera.transform.localRotation = Quaternion.Euler(_pitch, 0, 0);
         transform.Rotate(Vector3.up * mouseX);
+    }
+
+
+    public void TakeDamage(float amount)
+    {
+        _healthSystem.TakeDamage(amount);
     }
 }

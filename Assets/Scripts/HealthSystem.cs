@@ -43,7 +43,6 @@ public class HealthSystem : MonoBehaviour, IDamageable
             onDamage?.Invoke(life, maxLife);
             onLifeUpdated?.Invoke(life, maxLife);
         }
-        Debug.Log(damage);
     }
 
     public void Heal(float plus)
